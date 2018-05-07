@@ -44,6 +44,7 @@
 #include "context.h"
 #include "copy.h"
 #include "globals.h"
+#include "help/help.h"
 #include "hook.h"
 #include "keymap.h"
 #include "mailbox.h"
@@ -126,6 +127,8 @@ struct MxOps *mx_get_ops(enum MailboxType magic)
     case MUTT_NOTMUCH:
       return &mx_notmuch_ops;
 #endif
+    case MUTT_HELP:
+      return &mx_help_ops;
     default:
       return NULL;
   }
@@ -209,6 +212,16 @@ bool mx_is_nntp(const char *p)
 }
 #endif
 
+/**
+ * mx_is_help - Is this a Help mailbox
+ * @param p Mailbox string to test
+ * @retval true It is a Help mailbox
+ */
+bool mx_is_help(const char *p)
+{
+  return (url_check_scheme(p) == U_HELP);
+}
+
 #ifdef USE_NOTMUCH
 /**
  * mx_is_notmuch - Is this a Notmuch mailbox
@@ -245,6 +258,9 @@ enum MailboxType mx_get_magic(const char *path)
   if (mx_is_imap(path))
     return MUTT_IMAP;
 #endif /* USE_IMAP */
+
+  if (mx_is_help(path))
+    return MUTT_HELP;
 
 #ifdef USE_POP
   if (mx_is_pop(path))
