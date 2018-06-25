@@ -110,6 +110,7 @@ WHERE char *DateFormat; ///< Config: strftime format string for the `%d` expando
 WHERE char *DsnNotify;
 WHERE char *DsnReturn;
 WHERE char *Editor; ///< Config: External command to use as an email editor
+WHERE char *HelpDocDir;
 WHERE char *Hostname; ///< Config: Fully-qualified domain name of this machine
 WHERE char *IndexFormat; ///< Config: printf-like format string for the index menu (emails)
 
