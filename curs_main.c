@@ -514,8 +514,8 @@ static int main_change_folder(struct Menu *menu, int op, char *buf,
     char *new_last_folder = NULL;
 
 #ifdef USE_COMPRESSED
-    if (Context->compress_info && Context->realpath)
-      new_last_folder = mutt_str_strdup(Context->realpath);
+    if (Context->compress_info && Context->mailbox->realpath)
+      new_last_folder = mutt_str_strdup(Context->mailbox->realpath);
     else
 #endif
       new_last_folder = mutt_str_strdup(Context->path);
