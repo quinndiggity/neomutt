@@ -53,7 +53,6 @@ enum AclRights
  */
 struct Context
 {
-  char *path;
   FILE *fp;
   time_t atime;
   time_t mtime;

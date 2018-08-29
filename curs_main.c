@@ -506,7 +506,7 @@ static int main_change_folder(struct Menu *menu, int op, char *buf,
   }
 
   /* keepalive failure in mutt_enter_fname may kill connection. #3028 */
-  if (Context && !Context->path)
+  if (Context && !Context->mailbox->path)
     mutt_context_free(&Context);
 
   if (Context)
@@ -518,7 +518,7 @@ static int main_change_folder(struct Menu *menu, int op, char *buf,
       new_last_folder = mutt_str_strdup(Context->mailbox->realpath);
     else
 #endif
-      new_last_folder = mutt_str_strdup(Context->path);
+      new_last_folder = mutt_str_strdup(Context->mailbox->path);
     *oldcount = Context ? Context->msgcount : 0;
 
     int check = mx_mbox_close(&Context, index_hint);
@@ -982,7 +982,7 @@ int mutt_index_menu(void)
       check = mx_mbox_check(Context, &index_hint);
       if (check < 0)
       {
-        if (!Context->path)
+        if (!Context->mailbox->path)
         {
           /* fatal error occurred */
           mutt_context_free(&Context);
@@ -1797,7 +1797,7 @@ int mutt_index_menu(void)
         }
 
         /* check for a fatal error, or all messages deleted */
-        if (!Context->path)
+        if (!Context->mailbox->path)
           mutt_context_free(&Context);
 
         /* if we were in the pager, redisplay the message */
@@ -2069,9 +2069,9 @@ int mutt_index_menu(void)
           cp = _("Open mailbox");
 
         buf[0] = '\0';
-        if ((op == OP_MAIN_NEXT_UNREAD_MAILBOX) && Context && Context->path)
+        if ((op == OP_MAIN_NEXT_UNREAD_MAILBOX) && Context && Context->mailbox->path)
         {
-          mutt_str_strfcpy(buf, Context->path, sizeof(buf));
+          mutt_str_strfcpy(buf, Context->mailbox->path, sizeof(buf));
           mutt_pretty_mailbox(buf, sizeof(buf));
           mutt_mailbox(buf, sizeof(buf));
           if (!buf[0])
@@ -2097,7 +2097,7 @@ int mutt_index_menu(void)
         {
           if (Context && (Context->magic == MUTT_NOTMUCH))
           {
-            mutt_str_strfcpy(buf, Context->path, sizeof(buf));
+            mutt_str_strfcpy(buf, Context->mailbox->path, sizeof(buf));
             mutt_mailbox_vfolder(buf, sizeof(buf));
           }
           mutt_enter_vfolder(cp, buf, sizeof(buf), 1);
@@ -2110,9 +2110,9 @@ int mutt_index_menu(void)
 #endif
         else
         {
-          if (ChangeFolderNext && Context && Context->path)
+          if (ChangeFolderNext && Context && Context->mailbox->path)
           {
-            mutt_str_strfcpy(buf, Context->path, sizeof(buf));
+            mutt_str_strfcpy(buf, Context->mailbox->path, sizeof(buf));
             mutt_pretty_mailbox(buf, sizeof(buf));
           }
 #ifdef USE_NNTP

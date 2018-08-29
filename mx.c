@@ -179,7 +179,7 @@ static int mx_open_mailbox_append(struct Context *ctx, int flags)
   struct stat sb;
 
   ctx->append = true;
-  ctx->magic = mx_path_probe(ctx->path, NULL);
+  ctx->magic = mx_path_probe(ctx->mailbox->path, NULL);
   if (ctx->magic == MUTT_UNKNOWN)
   {
     if (flags & (MUTT_APPEND | MUTT_NEWFOLDER))
@@ -188,14 +188,14 @@ static int mx_open_mailbox_append(struct Context *ctx, int flags)
     }
     else
     {
-      mutt_error(_("%s is not a mailbox"), ctx->path);
+      mutt_error(_("%s is not a mailbox"), ctx->mailbox->path);
       return -1;
     }
   }
 
   if (ctx->magic == MUTT_MAILBOX_ERROR)
   {
-    if (stat(ctx->path, &sb) == -1)
+    if (stat(ctx->mailbox->path, &sb) == -1)
     {
       if (errno == ENOENT)
       {
@@ -209,7 +209,7 @@ static int mx_open_mailbox_append(struct Context *ctx, int flags)
       }
       else
       {
-        mutt_perror(ctx->path);
+        mutt_perror(ctx->mailbox->path);
         return -1;
       }
     }
@@ -247,21 +247,17 @@ struct Context *mx_mbox_open(const char *path, int flags)
 
   struct Context *ctx = mutt_mem_calloc(1, sizeof(*ctx));
 
-  ctx->path = mutt_str_strdup(path);
-  if (!ctx->path)
-  {
-    FREE(&ctx);
-    return NULL;
-  }
-  ctx->mailbox = mutt_find_mailbox(ctx->path);
+  ctx->mailbox = mutt_find_mailbox(ctx->mailbox->path);
   if (!ctx->mailbox)
   {
-    ctx->mailbox = mailbox_new(ctx->path);
+    ctx->mailbox = mailbox_new(ctx->mailbox->path);
     ctx->mailbox->flags = MB_HIDDEN;
   }
 
-  if (!realpath(ctx->path, ctx->mailbox->realpath))
-    mutt_str_strfcpy(ctx->mailbox->realpath, ctx->path, sizeof(ctx->mailbox->realpath));
+  mutt_str_strfcpy(ctx->mailbox->path, path, sizeof(ctx->mailbox->path));
+
+  if (!realpath(ctx->mailbox->path, ctx->mailbox->realpath))
+    mutt_str_strfcpy(ctx->mailbox->realpath, ctx->mailbox->path, sizeof(ctx->mailbox->realpath));
 
   ctx->msgnotreadyet = -1;
   ctx->collapsed = false;
@@ -312,7 +308,7 @@ struct Context *mx_mbox_open(const char *path, int flags)
   OptForceRefresh = true;
 
   if (!ctx->quiet)
-    mutt_message(_("Reading %s..."), ctx->path);
+    mutt_message(_("Reading %s..."), ctx->mailbox->path);
 
   rc = ctx->mx_ops->mbox_open(ctx);
 
@@ -329,7 +325,7 @@ struct Context *mx_mbox_open(const char *path, int flags)
     if (!ctx->quiet)
       mutt_clear_error();
     if (rc == -2)
-      mutt_error(_("Reading from %s interrupted..."), ctx->path);
+      mutt_error(_("Reading from %s interrupted..."), ctx->mailbox->path);
   }
   else
   {
@@ -353,17 +349,17 @@ void mx_fastclose_mailbox(struct Context *ctx)
     return;
 
   /* fix up the times so mailbox won't get confused */
-  if (ctx->peekonly && ctx->path && (ctx->mtime > ctx->atime))
+  if (ctx->peekonly && ctx->mailbox->path && (ctx->mtime > ctx->atime))
   {
     ut.actime = ctx->atime;
     ut.modtime = ctx->mtime;
-    utime(ctx->path, &ut);
+    utime(ctx->mailbox->path, &ut);
   }
 
   /* never announce that a mailbox we've just left has new mail. #3290
    * TODO: really belongs in mx_mbox_close, but this is a nice hook point */
   if (!ctx->peekonly)
-    mutt_mailbox_setnotified(ctx->path);
+    mutt_mailbox_setnotified(ctx->mailbox->path);
 
   if (ctx->mx_ops)
     ctx->mx_ops->mbox_close(ctx);
@@ -378,7 +374,6 @@ void mx_fastclose_mailbox(struct Context *ctx)
     mutt_header_free(&ctx->hdrs[i]);
   FREE(&ctx->hdrs);
   FREE(&ctx->v2r);
-  FREE(&ctx->path);
   FREE(&ctx->pattern);
   if (ctx->limit_pattern)
     mutt_pattern_free(&ctx->limit_pattern);
@@ -399,7 +394,7 @@ static int sync_mailbox(struct Context *ctx, int *index_hint)
     return -1;
 
   if (!ctx->quiet)
-    mutt_message(_("Writing %s..."), ctx->path);
+    mutt_message(_("Writing %s..."), ctx->mailbox->path);
 
   return ctx->mx_ops->mbox_sync(ctx, index_hint);
 }
@@ -450,7 +445,7 @@ static int trash_append(struct Context *ctx)
     return -1;
   }
 
-  if (lstat(ctx->path, &stc) == 0 && stc.st_ino == st.st_ino &&
+  if (lstat(ctx->mailbox->path, &stc) == 0 && stc.st_ino == st.st_ino &&
       stc.st_dev == st.st_dev && stc.st_rdev == st.st_rdev)
   {
     return 0; /* we are in the trash folder: simple sync */
@@ -555,7 +550,7 @@ int mx_mbox_close(struct Context **pctx, int *index_hint)
   if (read_msgs && Move != MUTT_NO)
   {
     int is_spool;
-    char *p = mutt_find_hook(MUTT_MBOX_HOOK, ctx->path);
+    char *p = mutt_find_hook(MUTT_MBOX_HOOK, ctx->mailbox->path);
     if (p)
     {
       is_spool = 1;
@@ -564,7 +559,7 @@ int mx_mbox_close(struct Context **pctx, int *index_hint)
     else
     {
       mutt_str_strfcpy(mbox, Mbox, sizeof(mbox));
-      is_spool = mutt_is_spool(ctx->path) && !mutt_is_spool(mbox);
+      is_spool = mutt_is_spool(ctx->mailbox->path) && !mutt_is_spool(mbox);
     }
 
     if (is_spool && *mbox)
@@ -688,7 +683,7 @@ int mx_mbox_close(struct Context **pctx, int *index_hint)
   }
 
   /* copy mails to the trash before expunging */
-  if (purge && ctx->deleted && (mutt_str_strcmp(ctx->path, Trash) != 0))
+  if (purge && ctx->deleted && (mutt_str_strcmp(ctx->mailbox->path, Trash) != 0))
   {
     if (trash_append(ctx) != 0)
     {
@@ -744,9 +739,9 @@ int mx_mbox_close(struct Context **pctx, int *index_hint)
   }
 
   if (ctx->msgcount == ctx->deleted && (ctx->magic == MUTT_MMDF || ctx->magic == MUTT_MBOX) &&
-      !mutt_is_spool(ctx->path) && !SaveEmpty)
+      !mutt_is_spool(ctx->mailbox->path) && !SaveEmpty)
   {
-    mutt_file_unlink_empty(ctx->path);
+    mutt_file_unlink_empty(ctx->mailbox->path);
   }
 
 #ifdef USE_SIDEBAR
@@ -932,7 +927,7 @@ int mx_mbox_sync(struct Context *ctx, int *index_hint)
   msgcount = ctx->msgcount;
   deleted = ctx->deleted;
 
-  if (purge && ctx->deleted && (mutt_str_strcmp(ctx->path, Trash) != 0))
+  if (purge && ctx->deleted && (mutt_str_strcmp(ctx->mailbox->path, Trash) != 0))
   {
     if (trash_append(ctx) != 0)
       return -1;
@@ -962,9 +957,9 @@ int mx_mbox_sync(struct Context *ctx, int *index_hint)
     mutt_sleep(0);
 
     if (ctx->msgcount == ctx->deleted && (ctx->magic == MUTT_MBOX || ctx->magic == MUTT_MMDF) &&
-        !mutt_is_spool(ctx->path) && !SaveEmpty)
+        !mutt_is_spool(ctx->mailbox->path) && !SaveEmpty)
     {
-      unlink(ctx->path);
+      unlink(ctx->mailbox->path);
       mx_fastclose_mailbox(ctx);
       return 0;
     }
