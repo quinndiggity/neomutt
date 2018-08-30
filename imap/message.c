@@ -88,9 +88,9 @@ static void update_context(struct ImapData *idata, int oldmsgcount)
 
   struct Context *ctx = idata->ctx;
   if (!idata->uid_hash)
-    idata->uid_hash = mutt_hash_int_create(MAX(6 * ctx->msgcount / 5, 30), 0);
+    idata->uid_hash = mutt_hash_int_create(MAX(6 * ctx->mailbox->msg_count / 5, 30), 0);
 
-  for (int msgno = oldmsgcount; msgno < ctx->msgcount; msgno++)
+  for (int msgno = oldmsgcount; msgno < ctx->mailbox->msg_count; msgno++)
   {
     h = ctx->hdrs[msgno];
     mutt_hash_int_insert(idata->uid_hash, HEADER_DATA(h)->uid, h);
@@ -665,8 +665,8 @@ int imap_read_headers(struct ImapData *idata, unsigned int msn_begin, unsigned i
     mx_alloc_memory(ctx);
   alloc_msn_index(idata, msn_end);
 
-  idx = ctx->msgcount;
-  oldmsgcount = ctx->msgcount;
+  idx = ctx->mailbox->msg_count;
+  oldmsgcount = ctx->mailbox->msg_count;
   idata->reopen &= ~(IMAP_REOPEN_ALLOW | IMAP_NEWMAIL_PENDING);
   idata->new_mail_count = 0;
 
@@ -758,7 +758,7 @@ int imap_read_headers(struct ImapData *idata, unsigned int msn_begin, unsigned i
           STAILQ_INIT(&ctx->hdrs[idx]->tags);
           driver_tags_replace(&ctx->hdrs[idx]->tags, mutt_str_strdup(h.data->flags_remote));
 
-          ctx->msgcount++;
+          ctx->mailbox->msg_count++;
           ctx->size += ctx->hdrs[idx]->content->length;
 
           h.data = NULL;
@@ -890,7 +890,7 @@ int imap_read_headers(struct ImapData *idata, unsigned int msn_begin, unsigned i
         imap_hcache_put(idata, ctx->hdrs[idx]);
 #endif /* USE_HCACHE */
 
-        ctx->msgcount++;
+        ctx->mailbox->msg_count++;
 
         h.data = NULL;
         idx++;
@@ -950,12 +950,12 @@ int imap_read_headers(struct ImapData *idata, unsigned int msn_begin, unsigned i
   imap_hcache_close(idata);
 #endif /* USE_HCACHE */
 
-  if (ctx->msgcount > oldmsgcount)
+  if (ctx->mailbox->msg_count > oldmsgcount)
   {
     /* TODO: it's not clear to me why we are calling mx_alloc_memory
      *       yet again. */
     mx_alloc_memory(ctx);
-    mx_update_context(ctx, ctx->msgcount - oldmsgcount);
+    mx_update_context(ctx, ctx->mailbox->msg_count - oldmsgcount);
     update_context(idata, oldmsgcount);
   }
 
@@ -1421,7 +1421,7 @@ int imap_copy_messages(struct Context *ctx, struct Header *h, char *dest, bool d
       /* if any messages have attachments to delete, fall through to FETCH
        * and APPEND. TODO: Copy what we can with COPY, fall through for the
        * remainder. */
-      for (int i = 0; i < ctx->msgcount; i++)
+      for (int i = 0; i < ctx->mailbox->msg_count; i++)
       {
         if (!message_is_tagged(ctx, i))
           continue;
@@ -1519,7 +1519,7 @@ int imap_copy_messages(struct Context *ctx, struct Header *h, char *dest, bool d
   {
     if (!h)
     {
-      for (int i = 0; i < ctx->msgcount; i++)
+      for (int i = 0; i < ctx->mailbox->msg_count; i++)
       {
         if (!message_is_tagged(ctx, i))
           continue;
