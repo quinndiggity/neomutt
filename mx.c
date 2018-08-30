@@ -515,7 +515,7 @@ int mx_mbox_close(struct Context **pctx, int *index_hint)
   }
 
 #ifdef USE_NNTP
-  if (ctx->unread && ctx->magic == MUTT_NNTP)
+  if (ctx->mailbox->msg_unread && ctx->magic == MUTT_NNTP)
   {
     struct NntpData *nntp_data = ctx->data;
 
@@ -752,7 +752,7 @@ int mx_mbox_close(struct Context **pctx, int *index_hint)
     for (i = 0; i < ctx->mailbox->msg_count; i++)
     {
       if (ctx->hdrs[i]->deleted && !ctx->hdrs[i]->read)
-        ctx->unread--;
+        ctx->mailbox->msg_unread--;
       if (ctx->hdrs[i]->deleted && ctx->hdrs[i]->flagged)
         ctx->flagged--;
     }
@@ -783,7 +783,7 @@ void mx_update_tables(struct Context *ctx, bool committing)
   ctx->tagged = 0;
   ctx->deleted = 0;
   ctx->new = 0;
-  ctx->unread = 0;
+  ctx->mailbox->msg_unread = 0;
   ctx->changed = false;
   ctx->flagged = 0;
   for (i = 0, j = 0; i < ctx->mailbox->msg_count; i++)
@@ -823,7 +823,7 @@ void mx_update_tables(struct Context *ctx, bool committing)
         ctx->flagged++;
       if (!ctx->hdrs[j]->read)
       {
-        ctx->unread++;
+        ctx->mailbox->msg_unread++;
         if (!ctx->hdrs[j]->old)
           ctx->new ++;
       }
@@ -1232,7 +1232,7 @@ void mx_update_context(struct Context *ctx, int new_messages)
       ctx->deleted++;
     if (!h->read)
     {
-      ctx->unread++;
+      ctx->mailbox->msg_unread++;
       if (!h->old)
         ctx->new ++;
     }
