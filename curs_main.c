@@ -920,7 +920,7 @@ int mutt_index_menu(void)
   menu->help =
       mutt_compile_help(helpstr, sizeof(helpstr), MENU_MAIN,
 #ifdef USE_NNTP
-                        (Context && (Context->magic == MUTT_NNTP)) ? IndexNewsHelp :
+                        (Context && (Context->mailbox->magic == MUTT_NNTP)) ? IndexNewsHelp :
 #endif
                                                                      IndexHelp);
   menu->custom_menu_redraw = index_menu_redraw;
@@ -1238,7 +1238,7 @@ int mutt_index_menu(void)
         CHECK_IN_MAILBOX;
         CHECK_READONLY;
         CHECK_ATTACH;
-        if (Context->magic == MUTT_NNTP)
+        if (Context->mailbox->magic == MUTT_NNTP)
         {
           struct Header *hdr = NULL;
 
@@ -1306,7 +1306,7 @@ int mutt_index_menu(void)
         CHECK_VISIBLE;
         CHECK_READONLY;
         CHECK_ATTACH;
-        if (Context->magic == MUTT_NNTP)
+        if (Context->mailbox->magic == MUTT_NNTP)
         {
           int oldmsgcount = Context->mailbox->msg_count;
           int oldindex = CURHDR->index;
@@ -1723,12 +1723,12 @@ int mutt_index_menu(void)
 
 #ifdef USE_IMAP
       case OP_MAIN_IMAP_FETCH:
-        if (Context && Context->magic == MUTT_IMAP)
+        if (Context && Context->mailbox->magic == MUTT_IMAP)
           imap_check_mailbox(Context, true);
         break;
 
       case OP_MAIN_IMAP_LOGOUT_ALL:
-        if (Context && Context->magic == MUTT_IMAP)
+        if (Context && Context->mailbox->magic == MUTT_IMAP)
         {
           if (mx_mbox_close(&Context, &index_hint) != 0)
           {
@@ -1834,7 +1834,7 @@ int mutt_index_menu(void)
 #ifdef USE_NOTMUCH
       case OP_MAIN_ENTIRE_THREAD:
       {
-        if (!Context || (Context->magic != MUTT_NOTMUCH))
+        if (!Context || (Context->mailbox->magic != MUTT_NOTMUCH))
         {
           mutt_message(_("No virtual folder, aborting"));
           break;
@@ -1908,7 +1908,7 @@ int mutt_index_menu(void)
           }
 
 #ifdef USE_NOTMUCH
-          if (Context->magic == MUTT_NOTMUCH)
+          if (Context->mailbox->magic == MUTT_NOTMUCH)
             nm_longrun_init(Context, true);
 #endif
           for (px = 0, j = 0; j < Context->mailbox->msg_count; j++)
@@ -1923,7 +1923,7 @@ int mutt_index_menu(void)
             {
               bool still_queried = false;
 #ifdef USE_NOTMUCH
-              if (Context->magic == MUTT_NOTMUCH)
+              if (Context->mailbox->magic == MUTT_NOTMUCH)
                 still_queried = nm_message_is_still_queried(Context, Context->hdrs[j]);
 #endif
               Context->hdrs[j]->quasi_deleted = !still_queried;
@@ -1931,7 +1931,7 @@ int mutt_index_menu(void)
             }
           }
 #ifdef USE_NOTMUCH
-          if (Context->magic == MUTT_NOTMUCH)
+          if (Context->mailbox->magic == MUTT_NOTMUCH)
             nm_longrun_done(Context);
 #endif
           menu->redraw = REDRAW_STATUS | REDRAW_INDEX;
@@ -1947,7 +1947,7 @@ int mutt_index_menu(void)
           {
             bool still_queried = false;
 #ifdef USE_NOTMUCH
-            if (Context->magic == MUTT_NOTMUCH)
+            if (Context->mailbox->magic == MUTT_NOTMUCH)
               still_queried = nm_message_is_still_queried(Context, CURHDR);
 #endif
             CURHDR->quasi_deleted = !still_queried;
@@ -2095,7 +2095,7 @@ int mutt_index_menu(void)
 #ifdef USE_NOTMUCH
         else if (op == OP_MAIN_CHANGE_VFOLDER)
         {
-          if (Context && (Context->magic == MUTT_NOTMUCH))
+          if (Context && (Context->mailbox->magic == MUTT_NOTMUCH))
           {
             mutt_str_strfcpy(buf, Context->mailbox->path, sizeof(buf));
             mutt_mailbox_vfolder(buf, sizeof(buf));
@@ -2160,7 +2160,7 @@ int mutt_index_menu(void)
         /* mutt_mailbox_check() must be done with mail-reader mode! */
         menu->help = mutt_compile_help(
             helpstr, sizeof(helpstr), MENU_MAIN,
-            (Context && (Context->magic == MUTT_NNTP)) ? IndexNewsHelp : IndexHelp);
+            (Context && (Context->mailbox->magic == MUTT_NNTP)) ? IndexNewsHelp : IndexHelp);
 #endif
         mutt_expand_path(buf, sizeof(buf));
 #ifdef USE_SIDEBAR
@@ -2916,7 +2916,7 @@ int mutt_index_menu(void)
         CHECK_MSGCOUNT;
         CHECK_READONLY;
         CHECK_ATTACH
-        if (Context && Context->magic == MUTT_NNTP)
+        if (Context && Context->mailbox->magic == MUTT_NNTP)
         {
           struct NntpData *nntp_data = Context->data;
           if (mutt_newsgroup_catchup(nntp_data->nserv, nntp_data->group))
@@ -3088,7 +3088,7 @@ int mutt_index_menu(void)
         /* in an IMAP folder index with imap_peek=no, piping could change
          * new or old messages status to read. Redraw what's needed.
          */
-        if (Context->magic == MUTT_IMAP && !ImapPeek)
+        if (Context->mailbox->magic == MUTT_IMAP && !ImapPeek)
         {
           menu->redraw |= (tag ? REDRAW_INDEX : REDRAW_CURRENT) | REDRAW_STATUS;
         }
@@ -3106,7 +3106,7 @@ int mutt_index_menu(void)
         /* in an IMAP folder index with imap_peek=no, printing could change
          * new or old messages status to read. Redraw what's needed.
          */
-        if (Context->magic == MUTT_IMAP && !ImapPeek)
+        if (Context->mailbox->magic == MUTT_IMAP && !ImapPeek)
         {
           menu->redraw |= (tag ? REDRAW_INDEX : REDRAW_CURRENT) | REDRAW_STATUS;
         }
@@ -3228,7 +3228,7 @@ int mutt_index_menu(void)
             query_quadoption(FollowupToPoster,
                              _("Reply by mail as poster prefers?")) != MUTT_YES)
         {
-          if (Context && Context->magic == MUTT_NNTP &&
+          if (Context && Context->mailbox->magic == MUTT_NNTP &&
               !((struct NntpData *) Context->data)->allowed && query_quadoption(PostModerated, _("Posting to this group not allowed, may be moderated. Continue?")) != MUTT_YES)
           {
             break;

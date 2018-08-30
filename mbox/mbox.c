@@ -481,9 +481,9 @@ static int mbox_mbox_open(struct Context *ctx)
     return -1;
   }
 
-  if (ctx->magic == MUTT_MBOX)
+  if (ctx->mailbox->magic == MUTT_MBOX)
     rc = mbox_parse_mailbox(ctx);
-  else if (ctx->magic == MUTT_MMDF)
+  else if (ctx->mailbox->magic == MUTT_MMDF)
     rc = mmdf_parse_mailbox(ctx);
   else
     rc = -1;
@@ -677,7 +677,7 @@ static int reopen_mailbox(struct Context *ctx, int *index_hint)
   ctx->subj_hash = NULL;
   mutt_make_label_hash(ctx);
 
-  switch (ctx->magic)
+  switch (ctx->mailbox->magic)
   {
     case MUTT_MBOX:
     case MUTT_MMDF:
@@ -687,7 +687,7 @@ static int reopen_mailbox(struct Context *ctx, int *index_hint)
       if (!ctx->fp)
         rc = -1;
       else
-        rc = ((ctx->magic == MUTT_MBOX) ? mbox_parse_mailbox : mmdf_parse_mailbox)(ctx);
+        rc = ((ctx->mailbox->magic == MUTT_MBOX) ? mbox_parse_mailbox : mmdf_parse_mailbox)(ctx);
       break;
 
     default:
@@ -846,12 +846,12 @@ static int mbox_mbox_check(struct Context *ctx, int *index_hint)
         mutt_debug(1, "#1 fseek() failed\n");
       if (fgets(buffer, sizeof(buffer), ctx->fp))
       {
-        if ((ctx->magic == MUTT_MBOX && (mutt_str_strncmp("From ", buffer, 5) == 0)) ||
-            (ctx->magic == MUTT_MMDF && (mutt_str_strcmp(MMDF_SEP, buffer) == 0)))
+        if ((ctx->mailbox->magic == MUTT_MBOX && (mutt_str_strncmp("From ", buffer, 5) == 0)) ||
+            (ctx->mailbox->magic == MUTT_MMDF && (mutt_str_strcmp(MMDF_SEP, buffer) == 0)))
         {
           if (fseeko(ctx->fp, ctx->size, SEEK_SET) != 0)
             mutt_debug(1, "#2 fseek() failed\n");
-          if (ctx->magic == MUTT_MBOX)
+          if (ctx->mailbox->magic == MUTT_MBOX)
             mbox_parse_mailbox(ctx);
           else
             mmdf_parse_mailbox(ctx);
@@ -1060,7 +1060,7 @@ static int mbox_mbox_sync(struct Context *ctx, int *index_hint)
   /* the offset stored in the header does not include the MMDF_SEP, so make
    * sure we seek to the correct location
    */
-  if (ctx->magic == MUTT_MMDF)
+  if (ctx->mailbox->magic == MUTT_MMDF)
     offset -= (sizeof(MMDF_SEP) - 1);
 
   /* allocate space for the new offsets */
@@ -1091,7 +1091,7 @@ static int mbox_mbox_sync(struct Context *ctx, int *index_hint)
     {
       j++;
 
-      if (ctx->magic == MUTT_MMDF)
+      if (ctx->mailbox->magic == MUTT_MMDF)
       {
         if (fputs(MMDF_SEP, fp) == EOF)
         {
@@ -1124,7 +1124,7 @@ static int mbox_mbox_sync(struct Context *ctx, int *index_hint)
       new_offset[i - first].body = ftello(fp) - ctx->hdrs[i]->content->length + offset;
       mutt_body_free(&ctx->hdrs[i]->content->parts);
 
-      switch (ctx->magic)
+      switch (ctx->mailbox->magic)
       {
         case MUTT_MMDF:
           if (fputs(MMDF_SEP, fp) == EOF)
@@ -1178,8 +1178,8 @@ static int mbox_mbox_sync(struct Context *ctx, int *index_hint)
   if (fseeko(ctx->fp, offset, SEEK_SET) != 0 || /* seek the append location */
       /* do a sanity check to make sure the mailbox looks ok */
       !fgets(buf, sizeof(buf), ctx->fp) ||
-      (ctx->magic == MUTT_MBOX && (mutt_str_strncmp("From ", buf, 5) != 0)) ||
-      (ctx->magic == MUTT_MMDF && (mutt_str_strcmp(MMDF_SEP, buf) != 0)))
+      (ctx->mailbox->magic == MUTT_MBOX && (mutt_str_strncmp("From ", buf, 5) != 0)) ||
+      (ctx->mailbox->magic == MUTT_MMDF && (mutt_str_strcmp(MMDF_SEP, buf) != 0)))
   {
     mutt_debug(1, "message not in expected position.\n");
     mutt_debug(1, "\tLINE: %s\n", buf);
