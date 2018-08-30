@@ -754,7 +754,7 @@ int mx_mbox_close(struct Context **pctx, int *index_hint)
       if (ctx->hdrs[i]->deleted && !ctx->hdrs[i]->read)
         ctx->mailbox->msg_unread--;
       if (ctx->hdrs[i]->deleted && ctx->hdrs[i]->flagged)
-        ctx->flagged--;
+        ctx->mailbox->msg_flagged--;
     }
     ctx->mailbox->msg_count -= ctx->deleted;
     mutt_sb_set_mailbox_stats(ctx);
@@ -785,7 +785,7 @@ void mx_update_tables(struct Context *ctx, bool committing)
   ctx->new = 0;
   ctx->mailbox->msg_unread = 0;
   ctx->changed = false;
-  ctx->flagged = 0;
+  ctx->mailbox->msg_flagged = 0;
   for (i = 0, j = 0; i < ctx->mailbox->msg_count; i++)
   {
     if (!ctx->hdrs[i]->quasi_deleted &&
@@ -820,7 +820,7 @@ void mx_update_tables(struct Context *ctx, bool committing)
       if (ctx->hdrs[j]->tagged)
         ctx->tagged++;
       if (ctx->hdrs[j]->flagged)
-        ctx->flagged++;
+        ctx->mailbox->msg_flagged++;
       if (!ctx->hdrs[j]->read)
       {
         ctx->mailbox->msg_unread++;
@@ -1227,7 +1227,7 @@ void mx_update_context(struct Context *ctx, int new_messages)
     if (h->changed)
       ctx->changed = true;
     if (h->flagged)
-      ctx->flagged++;
+      ctx->mailbox->msg_flagged++;
     if (h->deleted)
       ctx->deleted++;
     if (!h->read)
