@@ -969,7 +969,7 @@ static int envelope_defaults(struct Envelope *env, struct Context *ctx,
   if (!curenv)
     return -1;
 
-  if (flags & (SEND_REPLY|SEND_TO_SENDER))
+  if (flags & (SEND_REPLY | SEND_TO_SENDER))
   {
 #ifdef USE_NNTP
     if ((flags & SEND_NEWS))
@@ -1006,7 +1006,7 @@ static int envelope_defaults(struct Envelope *env, struct Context *ctx,
     if (flags & SEND_REPLY)
     {
       mutt_make_misc_reply_headers(env, curenv);
-      make_reference_headers (tag ? NULL : curenv, env, ctx);
+      make_reference_headers(tag ? NULL : curenv, env, ctx);
     }
   }
   else if (flags & SEND_FORWARD)
