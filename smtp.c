@@ -501,6 +501,38 @@ fail:
   FREE(&buf);
   return SMTP_AUTH_FAIL;
 }
+#endif
+
+/* smtp_auth_oauth: AUTH=OAUTHBEARER support. See RFC 7628 */
+static int smtp_auth_oauth(struct Connection *conn)
+{
+  char *ibuf = NULL;
+  char *oauthbearer = NULL;
+  int ilen;
+  int rc;
+
+  mutt_message(_("Authenticating (OAUTHBEARER)..."));
+
+  /* We get the access token from the smtp_oauth_refresh_command */
+  oauthbearer = mutt_account_getoauthbearer(&conn->account);
+  if (oauthbearer == NULL)
+    return SMTP_AUTH_FAIL;
+
+  ilen = strlen(oauthbearer) + 30;
+  ibuf = mutt_mem_malloc(ilen);
+  snprintf(ibuf, ilen, "AUTH OAUTHBEARER %s\r\n", oauthbearer);
+
+  rc = mutt_socket_send(conn, ibuf);
+  FREE(&oauthbearer);
+  FREE(&ibuf);
+
+  if (rc == -1)
+    return SMTP_AUTH_FAIL;
+  if (smtp_get_resp(conn) != 0)
+    return SMTP_AUTH_FAIL;
+
+  return SMTP_AUTH_SUCCESS;
+}
 
 /**
  * smtp_auth - Authenticate to an SMTP server
@@ -528,7 +560,19 @@ static int smtp_auth(struct Connection *conn)
 
       mutt_debug(2, "Trying method %s\n", method);
 
-      r = smtp_auth_sasl(conn, method);
+      if (!strcmp(method, "oauthbearer"))
+      {
+        r = smtp_auth_oauth(conn);
+      }
+      else
+      {
+#ifdef USE_SASL
+        r = smtp_auth_sasl(conn, method);
+#else
+        mutt_error(_("SMTP authentication method %s requires SASL"), method);
+        continue;
+#endif
+      }
 
       if (r == SMTP_AUTH_FAIL && delim)
       {
@@ -541,7 +585,14 @@ static int smtp_auth(struct Connection *conn)
     FREE(&methods);
   }
   else
+  {
+#ifdef USE_SASL
     r = smtp_auth_sasl(conn, AuthMechs);
+#else
+    mutt_error(_("SMTP authentication requires SASL"));
+    r = SMTP_AUTH_UNAVAIL;
+#endif
+  }
 
   if (r != SMTP_AUTH_SUCCESS)
     mutt_account_unsetpass(&conn->account);
@@ -558,8 +609,7 @@ static int smtp_auth(struct Connection *conn)
   return (r == SMTP_AUTH_SUCCESS) ? 0 : -1;
 }
 
-#else  /* USE_SASL */
-
+#ifdef USE_SASL
 /**
  * smtp_auth_plain - Authenticate using plain text
  * @param conn SMTP Connection
@@ -685,11 +735,10 @@ static int smtp_open(struct Connection *conn, bool esmtp)
       return -1;
     }
 
-#ifdef USE_SASL
     return smtp_auth(conn);
-#else
+#ifdef USE_SASL
     return smtp_auth_plain(conn);
-#endif /* USE_SASL */
+#endif
   }
 
   return 0;
